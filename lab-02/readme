@@ -1,0 +1,111 @@
+This code is long, considering what it does, and it looks complicated even to me.
+That said, the idea is pretty simple, just read carefully and I think you'll understand my
+fucked up thought process.
+
+I'll be awake at 6:30 tomorrow, so please text me any questions and I'll get back to you
+as soon as I can.
+
+
+
+
+
+Firstly, matrixMult is called, world/size/rank set, then from here on out, until 
+the MPI calls, only process with rank 0 is used. Here is what process 0 does:
+
+
+
+
+1) Vectorizes the matrices by creating an array of "send" structs. This is done
+for both the A and B matrices (so there are sendA's and sendB's)
+ 
+Send structs basically contain all of the data that will be needed when the
+vector is sent to the other processes -- it contains 2 arrays (arr, procs). Arr is 
+the array that holds the vector values, and procs holds the ranks of the processors
+that the vector needs to be sent to. It also keeps track of the size of both of 
+these arrays, of course. This is confusing, but crucial to the way that I constructed
+this algorithm, read over it twice if you have to.
+
+After the "send" structs are created, they're subsequently initialized and the
+vectors are loaded. This can most likely be reused in your own code for matrixAdd
+
+
+
+
+
+
+2) Finds out where to send each vector -- in other words, fills the "procs" array
+in the send structs.
+
+This is a fucking mess.
+
+First, it does the things we discussed in the HPCL today -- determines the number of 
+elements per processor (for root and non-root, as they have different values).
+It then uses these variables to create a "high" and a "low" bound for what indices
+of the matrix it will use (keeping in mind that at this point, the matrix is stored
+sequentially from 1..rows*cols). If this fucks up, an error is thrown and the program
+is exited. You will notice that there is an "if(i != nprocs) ... else ..." statement.
+This basically ensures that the root node is calculated differently than the rest. 
+
+Basically the same thing is done in both parts of this if/else statement:
+a function called indexIJ is used to convert the sequential index to an I,J formatted
+index. Then it adds it to both the A and B "send" matrices (the I index is used for
+the A matrix, and the J is used for the B matrix. I.e., rows are stored in A, columns
+are stored in B). It also does some checking to make sure that the same element isn't
+added twice to the same array.
+
+Then it does some printing for debugging.
+
+
+
+
+
+
+3) Sends the data to the other processes
+
+This actually isn't super bad. Theres an error in there somewhere that causes the arrays
+to be sent incorrectly, and I think I know what it is, but I'm going to sleep now.
+I would recommend using this only as a reference for how I used MPI_Send/Recv/Probe/Get_count
+
+Tags play an important role in this. In the MPI_Send(), this is the second to last argument,
+and third to last in the MPI_Recv(). Definitely look into those, but the basic idea is that 
+Recv will only receive messages with the same tag that they are sent with. You can also use
+MPI_ANY_TAG to ignore this. 
+
+Messages that contain data from the A matrix will be tagged with values between
+0 and nprocs-1 (I think, this is where the error comes in to play I believe, haven't debugged
+it properly yet)
+Matrix data from B is sent with tags between nprocs and 2*nprocs. 
+
+But before I send any actual vector information, I send the number of vectors first, 
+so a 2D array can be created in the other processes (an array of multVector structs, which
+just holds the array, size of the array, and the tag that was sent along with it). The way
+I designate this information with the tagging system is tagging them above 3*nprocs+(1 or 2), that way
+it won't interfere with information from the matrices, when I send that.
+
+Then the matrix information is sent, with the first tagging system described above.
+
+Finally, I send a terminating message, to tell the processes that the information is done
+being sent. This is tagged with 3*nprocs.
+
+
+
+
+
+4) At this point, the "if(me == 0)" statement is exited, and the program moves to the other processes.
+
+You can see that the first receives gather the number of vectors being sent. Then arrays of multVectors
+are created for both the A and B data. 
+
+Then it goes into a loop, collecting all the data from the message buffer, until the terminating MPI_Send
+is received. 
+
+It's at this point I had to stop, if you run it, you may notice that the processes with rank of 0 are getting
+more B vectors than they need, and an A vector is missing as well. Like I said, I think this is because of
+the way I used tagging, and one of them may have overlapped. 
+
+
+
+
+
+
+Good luck! 
