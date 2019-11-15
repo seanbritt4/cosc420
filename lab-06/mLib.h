@@ -28,7 +28,6 @@ void printMatrix(struct matrix* A){
 	printf("\n");
 }
 
-
 void identityMatrix(struct matrix* M){
 	int j = 0;
 	for(int i=0; i<M->rows*M->cols; i++){
@@ -42,7 +41,6 @@ void identityMatrix(struct matrix* M){
 	puts("");
 	// printMatrix(M);
 }
-
 
 struct matrix transpose(struct matrix* A){
 	struct matrix T;
@@ -66,9 +64,9 @@ void vecMatrixMult(int* returnVec, int* vec, struct matrix* B){
 		returnVec[i] = 0;
 		for(int j = 0; j < B->cols; j++){
 			returnVec[i] += vec[j] * B->arr[(i*B->cols)+j];
-			printf("%4.d ", returnVec[i]);
+			// printf("%4.d ", returnVec[i]);
 		}
-		printf("\n");
+		// printf("\n");
 	}
 }
 
@@ -462,6 +460,7 @@ void matrixSub(struct matrix *A, struct matrix *B, struct matrix *C){
 } //--end matrixAdd()
 
 void diag(struct matrix *A, int* b){
+	printf("diag\n");
 	// printf("%lu\n", sizeof(b)/sizeof(int));
 	printf("%d\n", A->rows);
 
@@ -498,11 +497,10 @@ void norm(float* b_hat, int* b){
     // printf("%f\n", v_hat);
 
     //multiply b*v_hat to find normalized vector b_hat
-    for( int i=0; i<len; i++){
+    for(int i=0; i<len; i++){
         b_hat[i] = b[i] * v_hat;
     }
 }
-
 
 /*
 . Implement a first-pass attempt to calculate the eigenvector corresponding to the largest eigenvector of
@@ -524,16 +522,14 @@ void powerMethod(struct matrix* M){
 	initMatrix(&C, M->rows, M->cols);
 
 
-	for(int i=0; i<M->rows; i++){
-		x[i] = 1;
-		// x_i[i] = 1;
-	}
+	for(int i=0; i<M->rows; i++){ x[i] = 1; }
 
-	float delta = 1.0;
-	float epsilon = .00001;
+	float delta = 1.0, epsilon = .00001;
+
 	while(delta > epsilon){
 		vecMatrixMult(x_i, x, M);
 		printf("\nx =\n");
+
 		for(int i=0; i < M->rows; i++){
 			printf("%4.d\n", x_i[i]);
 		}
@@ -542,17 +538,21 @@ void powerMethod(struct matrix* M){
 
 		printf("normalized: \n");
 		for(int i=0; i<M->rows; i++){
-		// for(int i=0; i<(sizeof(float)/sizeof(x_hat))+1; i++){
 			printf("%.2f\n", x_hat[i]);
 		}
 		// x = x_i;
-		// diag(&C, x);
+
 		//temporary, give an artificial limit to number of operations.
 		//will want to remove and track delta in real time
 		// delta *= .1;
 		delta = 0.0;
 	}
-}
 
+	/* GOAL FOR M=[84 87 78; 16 94 36; 87 93 50;] VIA OCTAVE
+		0.70031
+	    0.33370
+	    0.63104
+	*/
+}
 
 #endif
